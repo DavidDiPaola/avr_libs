@@ -12,11 +12,10 @@
 #                is connected.
 # FUSES ........ Parameters for avrdude to flash the fuses appropriately.
 
-DEVICE     = atmega644p
+DEVICE     = atmega1284p
 CLOCK      = 8000000
-
 #Currently set up to use the Adafruit USB programmer
-PROGRAMMER = -c usbtiny -P avrdoper
+PROGRAMMER = -c usbtiny
 
 OBJECTS    = main.o uart.o
 
