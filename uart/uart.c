@@ -1,25 +1,3 @@
-/***
-Copyright (C) 2011 David DiPaola
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of
-this software and associated documentation files (the "Software"), to deal in
-the Software without restriction, including without limitation the rights to
-use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
-of the Software, and to permit persons to whom the Software is furnished to do
-so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-***/
-
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
@@ -29,82 +7,117 @@ SOFTWARE.
 //The example Makefile supplied with this library does this.
 // e.g.: #define F_CPU 8000000
 
-//this is by no means a complete list, add targets as necessary
-#define USART1_SUPPORTED (defined(__AVR_ATmega164P__)||defined(__AVR_ATmega324P__)||defined(__AVR_ATmega644P__)||defined(__AVR_ATmega1284P__))
+#ifndef __AVR_ATmega1284P__
+#error "This UART library does not support your AVR, please modify uart.c"
+#endif
 
 //initialize a uart
 // uint8_t uart - which uart to initialize
 void uart_init(uint8_t uart, unsigned long baudrate){
-  baudrate = ((F_CPU/(baudrate<<4))-1); //massage the baud rate
+  baudrate = (F_CPU/16/baudrate-1); //massage the baud rate
 
-  if( uart == 0 ){
-    // Set baud rate
-    UBRR0L = (uint8_t)baudrate;
+  //USART 0
+  if(uart == 0){
+    //Set baud rate
     UBRR0H = (uint8_t)(baudrate>>8);
-    // Set frame format to 8 data bits, no parity, 1 stop bit
-    UCSR0C = (0<<USBS0)|(1<<UCSZ01)|(1<<UCSZ00);
-    // Enable receiver and transmitter
+    UBRR0L = (uint8_t)baudrate;
+
+    //Enable receiver and transmitter
     UCSR0B = (1<<RXEN0)|(1<<TXEN0);
+
+    //NOTE: some devices require the URSEL bit to be set in this step
+    //Set frame format to 8 data bits, no parity, 1 stop bit
+    UCSR0C = (0<<USBS0)|(1<<UCSZ01)|(1<<UCSZ00);
   }
 
-  #if USART1_SUPPORTED
-  else {
-    // Set baud rate
-    UBRR1L = (uint8_t)baudrate;
+  //USART 1
+  else if(uart == 1){
+    //Set baud rate
     UBRR1H = (uint8_t)(baudrate>>8);
-    // Set frame format to 8 data bits, no parity, 1 stop bit
-    UCSR1C = (0<<USBS1)|(1<<UCSZ11)|(1<<UCSZ10);
-    // Enable receiver and transmitter
+    UBRR1L = (uint8_t)baudrate;
+
+    //Enable receiver and transmitter
     UCSR1B = (1<<RXEN1)|(1<<TXEN1);
+
+    //NOTE: some devices require the URSEL bit to be set in this step
+    //Set frame format to 8 data bits, no parity, 1 stop bit
+    UCSR1C = (0<<USBS1)|(1<<UCSZ11)|(1<<UCSZ10);
   }
-  #endif
 }
 
 //send a byte
 // uint8_t uart - which uart to send on
 // char data - the data to be sent
-void uart_send(uint8_t uart, char data){
+inline void uart_send(uint8_t uart, char data){
   if(uart == 0){
     // Wait if a byte is being transmitted
     while((UCSR0A&(1<<UDRE0)) == 0) {};
+
     // Transmit data
     UDR0 = data;
   }
-
-  #if USART1_SUPPORTED
-  else {
+  else if(uart == 1){
     // Wait if a byte is being transmitted
     while((UCSR1A&(1<<UDRE1)) == 0) {};
+
     // Transmit data
     UDR1 = data;
   }
-  #endif
 }
 
 //waits until a byte is received and returns it
 // uint8_t uart - which uart to listen on
 // returns char - the data received
-char uart_get(uint8_t uart){
-  char result = 0;
+inline char uart_get(uint8_t uart){
+  char result = '\0';
 
   if(uart == 0){
     //wait until a byte has been received
     while((UCSR0A&(1<<RXC0)) == 0) {};
+
     //get received data
     result = UDR0;
   }
-
-  #if USART1_SUPPORTED
-  else {
+  else if(uart == 1){
     //wait until a byte has been received
     while((UCSR1A&(1<<RXC1)) == 0) {};
+
     //get received data
-	result = UDR1;
+    result = UDR1;
   }
-  #endif
 
   return result;
 }
+
+//prints a nibble (4 bits) in hexadecimal
+//  uint8_t uart - which uart to send on
+//  uint8_t nibble - the nibble to print (only 4 lowest bits used)
+void uart_print4(uint8_t uart, uint8_t nibble){
+  nibble &= 0b00001111;
+
+  if( nibble <= 0x09 ){
+    uart_send(uart, (nibble + 0x30));
+  } else {
+    uart_send(uart, ((nibble - 0x0A) + 0x41));
+  }
+}
+
+//prints a byte (8 bits) in hexadecimal
+//  uint8_t uart - which uart to send on
+//  uint8_t val - the byte to print
+void uart_print8(uint8_t uart, uint8_t val){
+  uart_print4(uart, val >> 4);
+  uart_print4(uart, val);
+}
+
+//prints a "word" (16 bits) in hexadecimal
+//  uint8_t uart - which uart to send on
+//  uint16_t val - the "word" to print
+void uart_print16(uint8_t uart, uint16_t val){
+  uart_print8(uart, val >> 8);
+  uart_print8(uart, val);
+}
+
 
 //sends characters from a null-terminated string
 //does NOT send the null character
@@ -137,9 +150,9 @@ void uart_println(uint8_t uart, const char* data, uint16_t maxlen){
 //sends characters from a null-terminated string in progmem
 //does NOT send the null character
 //  uint8_t uart - which uart to send on
-//  const prog_uchar* data - the string to be sent
+//  const char* PROGMEM data - the string to be sent
 //  uint16_t maxlen - the maximum number of characters to be sent
-void uart_prgprint(uint8_t uart, const prog_uchar* data, uint16_t maxlen){
+void uart_print_p(uint8_t uart, const char* PROGMEM data, uint16_t maxlen){
   uint16_t i=0;
   char c = pgm_read_byte_near(data); //prime the loop
 
@@ -152,13 +165,13 @@ void uart_prgprint(uint8_t uart, const prog_uchar* data, uint16_t maxlen){
   }
 }
 
-//uart_prints a null-terminated string in progmem followed by CR and LF chars
+//uart_print_ps a null-terminated string in progmem followed by CR and LF chars
 //  uint8_t uart - which uart to send on
-//  const prog_uchar* data - the string to be sent
+//  const char* PROGMEM data - the string to be sent
 //  uint16_t maxlen - the maximum number of characters to be sent
-void uart_prgprintln(uint8_t uart, const prog_uchar* data, uint16_t maxlen){
+void uart_println_p(uint8_t uart, const char* PROGMEM data, uint16_t maxlen){
   //print the string
-  uart_prgprint(uart, data, maxlen);
+  uart_print_p(uart, data, maxlen);
   //print the newline characters
   uart_send(uart, '\n');
   uart_send(uart, '\r');

@@ -1,28 +1,7 @@
-/***
-Copyright (C) 2011 David DiPaola
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of
-this software and associated documentation files (the "Software"), to deal in
-the Software without restriction, including without limitation the rights to
-use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
-of the Software, and to permit persons to whom the Software is furnished to do
-so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-***/
-
 #ifndef __UART_H
 #define __UART_H
 
+#include <inttypes.h>
 #include <avr/pgmspace.h>
 
 //This code relies on F_CPU being defined as the CPU clockrate in Hertz.
@@ -36,12 +15,27 @@ void uart_init(uint8_t uart, unsigned long baudrate);
 //send a byte
 // uint8_t uart - which uart to send on
 // char data - the data to be sent
-void uart_send(uint8_t uart, char data);
+inline void uart_send(uint8_t uart, char data);
 
 //waits until a byte is received and returns it
 // uint8_t uart - which uart to listen on
 // returns char - the data received
-char uart_get(uint8_t uart);
+inline char uart_get(uint8_t uart);
+
+//prints a nibble (4 bits) in hexadecimal
+//  uint8_t uart - which uart to send on
+//  uint8_t nibble - the nibble to print (only 4 lowest bits used)
+void uart_print4(uint8_t uart, uint8_t nibble);
+
+//prints a byte (8 bits) in hexadecimal
+//  uint8_t uart - which uart to send on
+//  uint8_t val - the byte to print
+void uart_print8(uint8_t uart, uint8_t val);
+
+//prints a "word" (16 bits) in hexadecimal
+//  uint8_t uart - which uart to send on
+//  uint16_t val - the "word" to print
+void uart_print16(uint8_t uart, uint16_t val);
 
 //sends characters from a null-terminated string
 //does NOT send the null character
@@ -59,15 +53,21 @@ void uart_println(uint8_t uart, const char* data, uint16_t maxlen);
 //sends characters from a null-terminated string in progmem
 //does NOT send the null character
 //  uint8_t uart - which uart to send on
-//  const prog_uchar* data - the string to be sent
+//  const char* PROGMEM data - the string to be sent
 //  uint16_t maxlen - the maximum number of characters to be sent
-void uart_prgprint(uint8_t uart, const prog_uchar* data, uint16_t maxlen);
+void uart_print_p(uint8_t uart, const char* PROGMEM data, uint16_t maxlen);
 
-//uart_prints a null-terminated string in progmem followed by CR and LF chars
+//macro for the putting string literals in progmem automatically
+#define uart_print_P(uart, data) uart_print_p(uart, PSTR(data), 0xFFFF)
+
+//uart_print_ps a null-terminated string in progmem followed by CR and LF chars
 //  uint8_t uart - which uart to send on
-//  const prog_uchar* data - the string to be sent
+//  const char* PROGMEM data - the string to be sent
 //  uint16_t maxlen - the maximum number of characters to be sent
-void uart_prgprintln(uint8_t uart, const prog_uchar* data, uint16_t maxlen);
+void uart_println_p(uint8_t uart, const char* PROGMEM data, uint16_t maxlen);
+
+//macro for the putting string literals in progmem automatically
+#define uart_println_P(uart, data) uart_println_p(uart, PSTR(data), 0xFFFF)
 
 //receives up to maxlen characters, putting them into a string
 //  uint8_t uart - which uart to listen on
