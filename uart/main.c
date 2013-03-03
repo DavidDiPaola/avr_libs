@@ -9,9 +9,7 @@ const uint8_t BUFF_LEN = 64; //the number of characters our buffer will have
 const uint8_t ECHO = 1; //echo when getting user input. 1=echo on, 0=echo off
 
 //some text to display
-PROGMEM prog_uchar welcome_text[] = "Hello world!";
-PROGMEM prog_uchar prompt_text[] = "Type some characters, then press Enter: ";
-PROGMEM prog_uchar result_text[] = "You typed: ";
+const char PROGMEM welcome_text[] = "An example string";
 
 int main(){
   //declare a buffer
@@ -21,15 +19,15 @@ int main(){
   uart_init(UART, BAUD_RATE);
 
   //print the welcome text
-  uart_prgprintln(UART, welcome_text, 0xFFFF);
+  uart_println_P(UART, "Hello world!");
 
   //print the prompt
-  uart_prgprint(UART, prompt_text, 0xFFFF);
+  uart_print_P(UART, "Type some characters, then press Enter: ");
   //get the input from the user
   uart_getln(UART, buffer, BUFF_LEN, ECHO);
 
   //print the result message
-  uart_prgprint(UART, result_text, 0xFFFF);
+  uart_print_P(UART, "You typed: ");
   //print the buffer
   uart_println(UART, buffer, BUFF_LEN);
 
