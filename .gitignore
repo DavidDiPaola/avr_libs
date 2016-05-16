@@ -1,23 +1,9 @@
-# GPS dumps
-*.csv
-*.dump
-
-# Object files
+# object files
 *.o
 
-# Libraries
-*.lib
-*.a
-
-# Shared objects (inc. Windows DLLs)
-*.dll
-*.so
-*.so.*
-*.dylib
-
-# Executables
-*.exe
-*.out
-*.app
+# executables
 *.hex
 *.elf
+
+# vim swap files
+.*.swp
